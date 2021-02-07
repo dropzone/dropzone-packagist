@@ -1,3 +1,9 @@
+## 5.7.4
+
+- Prevent hidden input field from getting focus (thanks to @sinedied)
+- Fix documentation of `maxFilesize` (thanks to @alxndr-w)
+- Fix build issues so the UMD module can be imported properly
+
 ## 5.7.3
 
 - Add `disablePreviews` option.
