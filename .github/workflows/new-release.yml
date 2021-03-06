@@ -33,7 +33,6 @@ jobs:
       - name: Copy relevant source files and delete source
         run: |
           cp source/package.json .
-          cp source/package-lock.json .
           cp source/CHANGELOG.md .
           rm -rf source
       - uses: stefanzweifel/git-auto-commit-action@v4
