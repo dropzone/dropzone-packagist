@@ -9759,7 +9759,7 @@ var dropzone_Dropzone = /*#__PURE__*/function (_Emitter) {
 
 
 dropzone_Dropzone.initClass();
-dropzone_Dropzone.version = "5.7.5"; // This is a map of options for your different dropzones. Add configurations
+dropzone_Dropzone.version = "5.7.6"; // This is a map of options for your different dropzones. Add configurations
 // to this object for your different dropzone elemens.
 //
 // Example:
