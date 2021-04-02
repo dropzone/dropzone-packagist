@@ -1,4 +1,4 @@
-<img alt="Dropzone.js" src="http://www.dropzonejs.com/images/new-logo.svg" />
+<img alt="Dropzone.js" src="https://raw.githubusercontent.com/dropzone/dropzone/assets/github-logo.svg" />
 
 Dropzone.js is a JavaScript library that turns any HTML element into a dropzone.
 This means that a user can drag and drop a file onto it, and the file gets
