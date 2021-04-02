@@ -7029,8 +7029,9 @@ var defaultOptions = {
 
   /**
    * The timeout for the XHR requests in milliseconds (since `v4.4.0`).
+   * If set to null or 0, no timeout is going to be set.
    */
-  timeout: 30000,
+  timeout: null,
 
   /**
    * How many file uploads to process in parallel (See the
@@ -9307,7 +9308,8 @@ var Dropzone = /*#__PURE__*/function (_Emitter) {
       var url = this.resolveOption(this.options.url, files);
       xhr.open(method, url, true); // Setting the timeout after open because of IE11 issue: https://gitlab.com/meno/dropzone/issues/8
 
-      xhr.timeout = this.resolveOption(this.options.timeout, files); // Has to be after `.open()`. See https://github.com/enyo/dropzone/issues/179
+      var timeout = this.resolveOption(this.options.timeout, files);
+      if (timeout) xhr.timeout = this.resolveOption(this.options.timeout, files); // Has to be after `.open()`. See https://github.com/enyo/dropzone/issues/179
 
       xhr.withCredentials = !!this.options.withCredentials;
 
@@ -9758,7 +9760,7 @@ var Dropzone = /*#__PURE__*/function (_Emitter) {
 
 
 Dropzone.initClass();
-Dropzone.version = "5.8.1"; // This is a map of options for your different dropzones. Add configurations
+Dropzone.version = "5.9.0"; // This is a map of options for your different dropzones. Add configurations
 // to this object for your different dropzone elemens.
 //
 // Example:
