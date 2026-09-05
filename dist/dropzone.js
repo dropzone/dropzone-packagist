@@ -346,6 +346,11 @@ var defaultOptions = {
 	*/
 	dictInvalidFileType: "You can't upload files of this type.",
 	/**
+	* If the file looks like an image but cannot be decoded, so no thumbnail can
+	* be generated for it.
+	*/
+	dictThumbnailError: "Failed to load the image. The file may be corrupted.",
+	/**
 	* If the server response was invalid.
 	* `{{statusCode}}` will be replaced with the servers status code.
 	*/
@@ -538,7 +543,7 @@ var defaultOptions = {
 	*       .innerHTML
 	*
 	*/
-	previewTemplate: "<div class=\"dz-preview dz-file-preview\">\n  <div class=\"dz-image\"><img data-dz-thumbnail /></div>\n  <div class=\"dz-details\">\n    <div class=\"dz-size\"><span data-dz-size></span></div>\n    <div class=\"dz-filename\"><span data-dz-name></span></div>\n  </div>\n  <div class=\"dz-progress\">\n    <span class=\"dz-upload\" data-dz-uploadprogress></span>\n  </div>\n  <div class=\"dz-error-message\"><span data-dz-errormessage></span></div>\n  <div class=\"dz-success-mark\">\n    <svg width=\"54\" height=\"54\" viewBox=\"0 0 54 54\" fill=\"white\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path\n        d=\"M10.2071 29.7929L14.2929 25.7071C14.6834 25.3166 15.3166 25.3166 15.7071 25.7071L21.2929 31.2929C21.6834 31.6834 22.3166 31.6834 22.7071 31.2929L38.2929 15.7071C38.6834 15.3166 39.3166 15.3166 39.7071 15.7071L43.7929 19.7929C44.1834 20.1834 44.1834 20.8166 43.7929 21.2071L22.7071 42.2929C22.3166 42.6834 21.6834 42.6834 21.2929 42.2929L10.2071 31.2071C9.81658 30.8166 9.81658 30.1834 10.2071 29.7929Z\"\n      />\n    </svg>\n  </div>\n  <div class=\"dz-error-mark\">\n    <svg width=\"54\" height=\"54\" viewBox=\"0 0 54 54\" fill=\"white\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path\n        d=\"M26.2929 20.2929L19.2071 13.2071C18.8166 12.8166 18.1834 12.8166 17.7929 13.2071L13.2071 17.7929C12.8166 18.1834 12.8166 18.8166 13.2071 19.2071L20.2929 26.2929C20.6834 26.6834 20.6834 27.3166 20.2929 27.7071L13.2071 34.7929C12.8166 35.1834 12.8166 35.8166 13.2071 36.2071L17.7929 40.7929C18.1834 41.1834 18.8166 41.1834 19.2071 40.7929L26.2929 33.7071C26.6834 33.3166 27.3166 33.3166 27.7071 33.7071L34.7929 40.7929C35.1834 41.1834 35.8166 41.1834 36.2071 40.7929L40.7929 36.2071C41.1834 35.8166 41.1834 35.1834 40.7929 34.7929L33.7071 27.7071C33.3166 27.3166 33.3166 26.6834 33.7071 26.2929L40.7929 19.2071C41.1834 18.8166 41.1834 18.1834 40.7929 17.7929L36.2071 13.2071C35.8166 12.8166 35.1834 12.8166 34.7929 13.2071L27.7071 20.2929C27.3166 20.6834 26.6834 20.6834 26.2929 20.2929Z\"\n      />\n    </svg>\n  </div>\n</div>\n",
+	previewTemplate: "<div class=\"dz-preview dz-file-preview\">\n  <div class=\"dz-image\"><img data-dz-thumbnail draggable=\"false\" /></div>\n  <div class=\"dz-details\">\n    <div class=\"dz-size\"><span data-dz-size></span></div>\n    <div class=\"dz-filename\"><span data-dz-name></span></div>\n  </div>\n  <div class=\"dz-progress\">\n    <span class=\"dz-upload\" data-dz-uploadprogress></span>\n  </div>\n  <div class=\"dz-error-message\"><span data-dz-errormessage></span></div>\n  <div class=\"dz-success-mark\">\n    <svg width=\"54\" height=\"54\" viewBox=\"0 0 54 54\" fill=\"white\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path\n        d=\"M10.2071 29.7929L14.2929 25.7071C14.6834 25.3166 15.3166 25.3166 15.7071 25.7071L21.2929 31.2929C21.6834 31.6834 22.3166 31.6834 22.7071 31.2929L38.2929 15.7071C38.6834 15.3166 39.3166 15.3166 39.7071 15.7071L43.7929 19.7929C44.1834 20.1834 44.1834 20.8166 43.7929 21.2071L22.7071 42.2929C22.3166 42.6834 21.6834 42.6834 21.2929 42.2929L10.2071 31.2071C9.81658 30.8166 9.81658 30.1834 10.2071 29.7929Z\"\n      />\n    </svg>\n  </div>\n  <div class=\"dz-error-mark\">\n    <svg width=\"54\" height=\"54\" viewBox=\"0 0 54 54\" fill=\"white\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path\n        d=\"M26.2929 20.2929L19.2071 13.2071C18.8166 12.8166 18.1834 12.8166 17.7929 13.2071L13.2071 17.7929C12.8166 18.1834 12.8166 18.8166 13.2071 19.2071L20.2929 26.2929C20.6834 26.6834 20.6834 27.3166 20.2929 27.7071L13.2071 34.7929C12.8166 35.1834 12.8166 35.8166 13.2071 36.2071L17.7929 40.7929C18.1834 41.1834 18.8166 41.1834 19.2071 40.7929L26.2929 33.7071C26.6834 33.3166 27.3166 33.3166 27.7071 33.7071L34.7929 40.7929C35.1834 41.1834 35.8166 41.1834 36.2071 40.7929L40.7929 36.2071C41.1834 35.8166 41.1834 35.1834 40.7929 34.7929L33.7071 27.7071C33.3166 27.3166 33.3166 26.6834 33.7071 26.2929L40.7929 19.2071C41.1834 18.8166 41.1834 18.1834 40.7929 17.7929L36.2071 13.2071C35.8166 12.8166 35.1834 12.8166 34.7929 13.2071L27.7071 20.2929C27.3166 20.6834 26.6834 20.6834 26.2929 20.2929Z\"\n      />\n    </svg>\n  </div>\n</div>\n",
 	drop(e) {
 		return this.element.classList.remove("dz-drag-hover");
 	},
@@ -1049,7 +1054,8 @@ var Dropzone = class Dropzone extends Emitter {
 		this._processingThumbnail = true;
 		let file = this._thumbnailQueue.shift();
 		return this.createThumbnail(file, this.options.thumbnailWidth, this.options.thumbnailHeight, this.options.thumbnailMethod, true, (dataUrl) => {
-			this.emit("thumbnail", file, dataUrl);
+			if (typeof dataUrl === "string") this.emit("thumbnail", file, dataUrl);
+			else this.emit("error", file, this.options.dictThumbnailError);
 			this._processingThumbnail = false;
 			return this._processThumbnailQueue();
 		});
@@ -1215,10 +1221,11 @@ var Dropzone = class Dropzone extends Emitter {
 	}
 	uploadFiles(files) {
 		this._transformFiles(files, (transformedFiles) => {
+			let chunkSize = Number(this.options.chunkSize);
 			if (this.options.chunking) {
 				let transformedFile = transformedFiles[0];
-				files[0].upload.chunked = this.options.chunking && (this.options.forceChunking || transformedFile.size > this.options.chunkSize);
-				files[0].upload.totalChunkCount = Math.ceil(transformedFile.size / this.options.chunkSize);
+				files[0].upload.chunked = this.options.chunking && (this.options.forceChunking || transformedFile.size > chunkSize);
+				files[0].upload.totalChunkCount = Math.max(1, Math.ceil(transformedFile.size / chunkSize));
 			}
 			if (files[0].upload.chunked) {
 				let file = files[0];
@@ -1230,8 +1237,8 @@ var Dropzone = class Dropzone extends Emitter {
 					while (file.upload.chunks[chunkIndex] !== void 0) chunkIndex++;
 					if (chunkIndex >= file.upload.totalChunkCount) return;
 					startedChunkCount++;
-					let start = chunkIndex * this.options.chunkSize;
-					let end = Math.min(start + this.options.chunkSize, transformedFile.size);
+					let start = chunkIndex * chunkSize;
+					let end = Math.min(start + chunkSize, transformedFile.size);
 					let dataBlock = {
 						name: this._getParamName(0),
 						data: transformedFile.webkitSlice ? transformedFile.webkitSlice(start, end) : transformedFile.slice(start, end),
