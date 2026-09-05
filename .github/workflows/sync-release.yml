@@ -1,0 +1,86 @@
+# Mirrors a dropzone/dropzone release into this repo so Packagist can serve it.
+#
+# This repo only ever writes to itself and reads a public release, so the
+# built-in GITHUB_TOKEN is enough and there is no cross-repo secret to expire.
+#
+# NOTE: GitHub disables scheduled workflows in public repositories after 60
+# days without repository activity. Releases here are far less frequent than
+# that, so treat the schedule as best-effort and use "Run workflow" after a
+# release to sync immediately.
+name: Sync Dropzone Release
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to sync (defaults to the latest)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync the latest release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout packagist repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Work out whether there is anything to do
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${INPUT_TAG:-$(gh release view --repo dropzone/dropzone --json tagName --jq .tagName)}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            echo "$tag is already synced, nothing to do."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$tag is new."
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout Dropzone at that tag
+        if: steps.release.outputs.needed == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: dropzone/dropzone
+          ref: ${{ steps.release.outputs.tag }}
+          path: source
+
+      - name: Replace dist from the release asset
+        if: steps.release.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo dropzone/dropzone \
+            --pattern dist.zip \
+            --clobber
+
+          rm -rf dist
+          unzip -q dist.zip
+          rm dist.zip
+
+          cp source/package.json .
+          cp source/CHANGELOG.md .
+          rm -rf source
+
+      - name: Commit and tag
+        if: steps.release.outputs.needed == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          branch: master
+          commit_message: "${{ steps.release.outputs.tag }} Release"
+          tagging_message: ${{ steps.release.outputs.tag }}
+          commit_user_name: Dropzone Drone
+          commit_user_email: drone@dropzone.dev
