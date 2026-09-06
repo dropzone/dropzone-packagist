@@ -1,6 +1,6 @@
 {
   "name": "dropzone",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "description": "Handles drag and drop of files for you.",
   "keywords": [
     "drag and drop",
@@ -57,9 +57,6 @@
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",
     "prepublishOnly": "pnpm run build"
-  },
-  "dependencies": {
-    "just-extend": "^5.0.0"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.0",

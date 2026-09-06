@@ -2,30 +2,34 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
-//#region \0rolldown/runtime.js
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __copyProps = (to, from, except, desc) => {
-	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-		key = keys[i];
-		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
-			get: ((k) => from[k]).bind(null, key),
-			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
-		});
+//#region src/extend.js
+function extend() {
+	var args = [].slice.call(arguments);
+	var deep = false;
+	if (typeof args[0] == "boolean") deep = args.shift();
+	var result = args[0];
+	if (isUnextendable(result)) throw new Error("extendee must be an object");
+	var extenders = args.slice(1);
+	var len = extenders.length;
+	for (var i = 0; i < len; i++) {
+		var extender = extenders[i];
+		for (var key in extender) if (Object.prototype.hasOwnProperty.call(extender, key)) {
+			var value = extender[key];
+			if (deep && isCloneable(value)) {
+				var base = Array.isArray(value) ? [] : {};
+				result[key] = extend(true, Object.prototype.hasOwnProperty.call(result, key) && !isUnextendable(result[key]) ? result[key] : base, value);
+			} else result[key] = value;
+		}
 	}
-	return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
-	value: mod,
-	enumerable: true
-}) : target, mod));
+	return result;
+}
+function isCloneable(obj) {
+	return Array.isArray(obj) || {}.toString.call(obj) == "[object Object]";
+}
+function isUnextendable(val) {
+	return !val || typeof val != "object" && typeof val != "function";
+}
 //#endregion
-let just_extend = require("just-extend");
-just_extend = __toESM(just_extend);
 //#region src/emitter.js
 var Emitter = class {
 	on(event, fn) {
@@ -128,7 +132,9 @@ var defaultOptions = {
 	*/
 	chunkSize: 2097152,
 	/**
-	* If `true`, the individual chunks of a file are being uploaded simultaneously.
+	* If `true`, the individual chunks of a file are uploaded simultaneously, at
+	* most `parallelUploads` of them at a time. Set a number to use a different
+	* limit, or `Infinity` to start every chunk at once.
 	*/
 	parallelChunkUploads: false,
 	/**
@@ -198,6 +204,17 @@ var defaultOptions = {
 	* Can be either `contain` or `crop`.
 	*/
 	resizeMethod: "contain",
+	/**
+	* The color to show through transparent parts of a resized image, as any
+	* CSS color. Formats without an alpha channel cannot store transparency, so
+	* a transparent PNG resized to `image/jpeg` comes out with black where it
+	* used to be see-through; setting this to `"#fff"` makes it white instead.
+	*
+	* `null` leaves transparency alone, which only produces black once the image
+	* is encoded to a format that cannot represent it. This has no effect on the
+	* preview thumbnails, which are always PNG.
+	*/
+	resizeTransparencyFill: null,
 	/**
 	* The base that is used to calculate the **displayed** filesize. You can
 	* change this to 1024 if you would rather display kibibytes, mebibytes,
@@ -376,10 +393,10 @@ var defaultOptions = {
 	*/
 	dictRemoveFileConfirmation: null,
 	/**
-	* Displayed if `maxFiles` is st and exceeded.
+	* Displayed if `maxFiles` is set and exceeded.
 	* The string `{{maxFiles}}` will be replaced by the configuration value.
 	*/
-	dictMaxFilesExceeded: "You can not upload any more files.",
+	dictMaxFilesExceeded: "You cannot upload any more files.",
 	/**
 	* Allows you to translate the different units. Starting with `tb` for terabytes and going down to
 	* `b` for bytes.
@@ -638,7 +655,12 @@ var defaultOptions = {
 	maxfilesexceeded() {},
 	maxfilesreached() {},
 	queuecomplete() {},
-	addedfiles() {}
+	addedfiles() {},
+	/**
+	* Called when a dropped folder turns out to have nothing in it at all.
+	* Receives the folder's path.
+	*/
+	emptyfolder() {}
 };
 //#endregion
 //#region src/dropzone.js
@@ -673,7 +695,8 @@ var Dropzone = class Dropzone extends Emitter {
 			"reset",
 			"maxfilesexceeded",
 			"maxfilesreached",
-			"queuecomplete"
+			"queuecomplete",
+			"emptyfolder"
 		];
 		this.prototype._thumbnailQueue = [];
 		this.prototype._processingThumbnail = false;
@@ -691,7 +714,7 @@ var Dropzone = class Dropzone extends Emitter {
 		Dropzone.instances.push(this);
 		this.element.dropzone = this;
 		let elementOptions = (left = Dropzone.optionsForElement(this.element)) != null ? left : {};
-		this.options = (0, just_extend.default)(true, {}, defaultOptions, elementOptions, options != null ? options : {});
+		this.options = extend(true, {}, defaultOptions, elementOptions, options != null ? options : {});
 		this.options.previewTemplate = this.options.previewTemplate.replace(/\n*/g, "");
 		if (this.options.forceFallback || !Dropzone.isBrowserSupported()) return this.options.fallback.call(this);
 		if (this.options.url == null) this.options.url = this.element.getAttribute("action");
@@ -750,12 +773,15 @@ var Dropzone = class Dropzone extends Emitter {
 				if (this.options.acceptedFiles !== null) this.hiddenFileInput.setAttribute("accept", this.options.acceptedFiles);
 				if (this.options.capture !== null) this.hiddenFileInput.setAttribute("capture", this.options.capture);
 				this.hiddenFileInput.setAttribute("tabindex", "-1");
+				this.hiddenFileInput.setAttribute("aria-label", "hidden file upload");
 				this.hiddenFileInput.style.visibility = "hidden";
 				this.hiddenFileInput.style.position = "absolute";
 				this.hiddenFileInput.style.top = "0";
 				this.hiddenFileInput.style.left = "0";
 				this.hiddenFileInput.style.height = "0";
 				this.hiddenFileInput.style.width = "0";
+				let ownerForm = this.element.closest("form");
+				if (ownerForm && ownerForm.id) this.hiddenFileInput.setAttribute("form", ownerForm.id);
 				Dropzone.getElement(this.options.hiddenInputContainer, "hiddenInputContainer").appendChild(this.hiddenFileInput);
 				this.hiddenFileInput.addEventListener("change", () => {
 					let { files } = this.hiddenFileInput;
@@ -952,8 +978,13 @@ var Dropzone = class Dropzone extends Emitter {
 		for (let i = 0; i < e.dataTransfer.files.length; i++) files[i] = e.dataTransfer.files[i];
 		if (files.length) {
 			let { items } = e.dataTransfer;
-			if (items && items.length && items[0].webkitGetAsEntry != null) this._addFilesFromItems(items);
-			else this.handleFiles(files);
+			if (items && items.length && items[0].webkitGetAsEntry != null) {
+				this._addFilesFromItems(items).then((addedFiles) => {
+					this.emit("addedfiles", addedFiles);
+				});
+				return;
+			}
+			this.handleFiles(files);
 		}
 		this.emit("addedfiles", files);
 	}
@@ -967,40 +998,56 @@ var Dropzone = class Dropzone extends Emitter {
 		for (let file of files) this.addFile(file);
 	}
 	_addFilesFromItems(items) {
-		return (() => {
-			let result = [];
-			for (let item of items) {
-				var entry;
-				if (item.webkitGetAsEntry != null && (entry = item.webkitGetAsEntry())) {
-					if (entry.isFile) result.push(this.addFile(item.getAsFile()));
-					else if (entry.isDirectory) result.push(this._addFilesFromDirectory(entry, entry.name));
-					else result.push(void 0);
-				} else if (item.getAsFile != null) {
-					if (item.kind == null || item.kind === "file") result.push(this.addFile(item.getAsFile()));
-					else result.push(void 0);
-				} else result.push(void 0);
+		let files = [];
+		let directories = [];
+		for (let item of items) {
+			let entry = item.webkitGetAsEntry != null ? item.webkitGetAsEntry() : null;
+			if (entry) {
+				if (entry.isFile) {
+					let file = item.getAsFile();
+					this.addFile(file);
+					files.push(file);
+				} else if (entry.isDirectory) directories.push(this._addFilesFromDirectory(entry, entry.name));
+			} else if (item.getAsFile != null && (item.kind == null || item.kind === "file")) {
+				let file = item.getAsFile();
+				this.addFile(file);
+				files.push(file);
 			}
-			return result;
-		})();
+		}
+		return Promise.all(directories).then((fromDirectories) => files.concat(...fromDirectories));
 	}
 	_addFilesFromDirectory(directory, path) {
 		let dirReader = directory.createReader();
-		let errorHandler = (error) => __guardMethod__(console, "log", (o) => o.log(error));
-		var readEntries = () => {
-			return dirReader.readEntries((entries) => {
+		return new Promise((resolve) => {
+			let pending = [];
+			let entryCount = 0;
+			let settle = () => Promise.all(pending).then((results) => resolve([].concat(...results)));
+			let errorHandler = (error) => {
+				__guardMethod__(console, "log", (o) => o.log(error));
+				settle();
+			};
+			let readEntries = () => dirReader.readEntries((entries) => {
 				if (entries.length > 0) {
-					for (let entry of entries) if (entry.isFile) entry.file((file) => {
-						if (this.options.ignoreHiddenFiles && file.name.substring(0, 1) === ".") return;
+					entryCount += entries.length;
+					for (let entry of entries) if (entry.isFile) pending.push(new Promise((resolveEntry) => entry.file((file) => {
+						if (this.options.ignoreHiddenFiles && file.name.substring(0, 1) === ".") {
+							resolveEntry([]);
+							return;
+						}
 						file.fullPath = `${path}/${file.name}`;
-						return this.addFile(file);
-					});
-					else if (entry.isDirectory) this._addFilesFromDirectory(entry, `${path}/${entry.name}`);
+						this.addFile(file);
+						resolveEntry([file]);
+					}, () => resolveEntry([]))));
+					else if (entry.isDirectory) pending.push(this._addFilesFromDirectory(entry, `${path}/${entry.name}`));
 					readEntries();
+					return null;
 				}
+				if (entryCount === 0) this.emit("emptyfolder", path);
+				settle();
 				return null;
 			}, errorHandler);
-		};
-		return readEntries();
+			readEntries();
+		});
 	}
 	accept(file, done) {
 		if (this.options.maxFilesize && file.size > this.options.maxFilesize * 1024 * 1024) done(this.options.dictFileTooBig.replace("{{filesize}}", Math.round(file.size / 1024 / 10.24) / 100).replace("{{maxFilesize}}", this.options.maxFilesize));
@@ -1077,6 +1124,12 @@ var Dropzone = class Dropzone extends Emitter {
 			else {
 				let { resizeMimeType } = this.options;
 				if (resizeMimeType == null) resizeMimeType = file.type;
+				if (this.options.resizeTransparencyFill != null) {
+					let ctx = canvas.getContext("2d");
+					ctx.globalCompositeOperation = "destination-over";
+					ctx.fillStyle = this.options.resizeTransparencyFill;
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+				}
 				let resizedDataURL = canvas.toDataURL(resizeMimeType, this.options.resizeQuality);
 				if (resizeMimeType === "image/jpeg" || resizeMimeType === "image/jpg") resizedDataURL = ExifRestore.restore(file.dataURL, resizedDataURL);
 				return callback(Dropzone.dataURItoBlob(resizedDataURL));
@@ -1230,13 +1283,11 @@ var Dropzone = class Dropzone extends Emitter {
 			if (files[0].upload.chunked) {
 				let file = files[0];
 				let transformedFile = transformedFiles[0];
-				let startedChunkCount = 0;
 				file.upload.chunks = [];
 				let handleNextChunk = () => {
 					let chunkIndex = 0;
 					while (file.upload.chunks[chunkIndex] !== void 0) chunkIndex++;
 					if (chunkIndex >= file.upload.totalChunkCount) return;
-					startedChunkCount++;
 					let start = chunkIndex * chunkSize;
 					let end = Math.min(start + chunkSize, transformedFile.size);
 					let dataBlock = {
@@ -1270,8 +1321,11 @@ var Dropzone = class Dropzone extends Emitter {
 						this._finished(files, response, null);
 					});
 				};
-				if (this.options.parallelChunkUploads) for (let i = 0; i < file.upload.totalChunkCount; i++) handleNextChunk();
-				else handleNextChunk();
+				if (this.options.parallelChunkUploads) {
+					let limit = this.options.parallelChunkUploads === true ? this.options.parallelUploads : this.options.parallelChunkUploads;
+					let startCount = Math.max(1, Math.min(limit, file.upload.totalChunkCount));
+					for (let i = 0; i < startCount; i++) handleNextChunk();
+				} else handleNextChunk();
 			} else {
 				let dataBlocks = [];
 				for (let i = 0; i < files.length; i++) dataBlocks[i] = {
@@ -1312,7 +1366,7 @@ var Dropzone = class Dropzone extends Emitter {
 			"X-Requested-With": "XMLHttpRequest"
 		} : {};
 		if (this.options.binaryBody) headers["Content-Type"] = files[0].type;
-		if (this.options.headers) (0, just_extend.default)(headers, this.options.headers);
+		if (this.options.headers) extend(headers, this.options.headers);
 		for (let headerName in headers) {
 			let headerValue = headers[headerName];
 			if (headerValue) xhr.setRequestHeader(headerName, headerValue);
@@ -1593,7 +1647,6 @@ Dropzone.CANCELED = "canceled";
 Dropzone.ERROR = "error";
 Dropzone.SUCCESS = "success";
 var detectVerticalSquash = function(img) {
-	img.naturalWidth;
 	let ih = img.naturalHeight;
 	let canvas = document.createElement("canvas");
 	canvas.width = 1;
